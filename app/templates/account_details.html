@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Details - Banking App</title>
+    <link rel="stylesheet" href="{{ url_for('main.static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Account Details</h1>
+            <div class="user-info">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
+            </div>
+        </div>
+
+        <div class="account-details-section">
+            <div class="account-summary">
+                <h2>{{ account.account_type }} Account</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <label>Account Number</label>
+                        <p>{{ account.account_number }}</p>
+                    </div>
+                    <div class="summary-item">
+                        <label>Current Balance</label>
+                        <p class="balance-large">${{ "%.2f"|format(account.balance) }}</p>
+                    </div>
+                    <div class="summary-item">
+                        <label>Account Type</label>
+                        <p>{{ account.account_type }}</p>
+                    </div>
+                    <div class="summary-item">
+                        <label>Created Date</label>
+                        <p>{{ account.created_at.strftime('%Y-%m-%d') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="transaction-controls">
+                <h3>Transactions</h3>
+                <div class="controls-grid">
+                    <div class="control-card">
+                        <h4>Deposit Money</h4>
+                        <div class="form-group">
+                            <input type="number" id="depositAmount" placeholder="Amount" step="0.01" min="0">
+                        </div>
+                        <button class="btn btn-success" onclick="depositMoney()">Deposit</button>
+                    </div>
+
+                    <div class="control-card">
+                        <h4>Withdraw Money</h4>
+                        <div class="form-group">
+                            <input type="number" id="withdrawAmount" placeholder="Amount" step="0.01" min="0">
+                        </div>
+                        <button class="btn btn-danger" onclick="withdrawMoney()">Withdraw</button>
+                    </div>
+
+                    <div class="control-card">
+                        <h4>Apply Monthly Interest</h4>
+                        <p class="interest-info">5% Annual Rate</p>
+                        <button class="btn btn-info" onclick="applyInterest()">Apply Interest</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="transaction-history">
+                <h3>Transaction History</h3>
+                <table class="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Balance After</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTableBody">
+                        {% if transactions %}
+                            {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td><span class="badge badge-{{ transaction.transaction_type }}">{{ transaction.transaction_type }}</span></td>
+                                    <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                                    <td>${{ "%.2f"|format(transaction.balance_after) }}</td>
+                                    <td>{{ transaction.description }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No transactions yet</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="message" class="message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const accountId = {{ account.id }};
+
+        async function depositMoney() {
+            const amount = parseFloat(document.getElementById('depositAmount').value);
+            if (isNaN(amount) || amount <= 0) {
+                showMessage('Please enter a valid amount', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/account/${accountId}/deposit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('Deposit successful! New balance: $' + data.new_balance.toFixed(2), 'success');
+                    document.getElementById('depositAmount').value = '';
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || 'Deposit failed', 'error');
+                }
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+            }
+        }
+
+        async function withdrawMoney() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            if (isNaN(amount) || amount <= 0) {
+                showMessage('Please enter a valid amount', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/account/${accountId}/withdraw`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('Withdrawal successful! New balance: $' + data.new_balance.toFixed(2), 'success');
+                    document.getElementById('withdrawAmount').value = '';
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || 'Withdrawal failed', 'error');
+                }
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+            }
+        }
+
+        async function applyInterest() {
+            try {
+                const response = await fetch(`/api/account/${accountId}/apply-interest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('Interest applied! Amount: $' + data.interest_amount.toFixed(2), 'success');
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || 'Failed to apply interest', 'error');
+                }
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
