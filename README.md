@@ -14,6 +14,11 @@ A full-featured banking application built with Flask and SQLite that allows user
 ✅ **Responsive Design** - Works on desktop and mobile devices
 ✅ **Beautiful UI** - Modern, gradient-based design with smooth interactions
 
+
+## How this was built
+
+I built this project with [Claude](https://claude.ai) as an AI coding assistant. My role was directing the work: I decided what the project should do, broke it into features, and wrote the prompts that guided Claude through building each one. Claude wrote the code.
+
 ## Tech Stack
 
 - **Backend**: Flask 2.3.3 (Python)
